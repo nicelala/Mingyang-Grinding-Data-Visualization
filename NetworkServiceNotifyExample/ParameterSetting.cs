@@ -23,6 +23,15 @@ namespace NetworkServiceNotifyExample
             public int RMSPm { get; set; }
             public int SmoothPm { get; set; }
 
+            public double PeakUpper { get; set; }
+            public double PeakLower { get; set; }
+            public double PeakTimeUpper { get; set; }
+            public double PeakTimeLower { get; set; }
+            public double CycleUpper { get; set; }
+            public double CycleLower { get; set; }
+            public double IntegralUpper { get; set; }
+            public double IntegralLower { get; set; }
+
         }
 
         // 定义事件，用于在参数输入后通知Form1
@@ -92,6 +101,102 @@ namespace NetworkServiceNotifyExample
             }
 
             thresholds.Threshold4 = threshold4;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_PeakUpper_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_PeakUpper.Text, out double peakUpper))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.PeakUpper = peakUpper;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_PeakLower_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_PeakLower.Text, out double peakLower))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.PeakLower = peakLower;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_PeakTimeUpper_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_PeakTimeUpper.Text, out double peakTimeUpper))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.PeakTimeUpper = peakTimeUpper;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_PeakTimeLower_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_PeakTimeLower.Text, out double peakTimeLower))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.PeakTimeLower = peakTimeLower;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_CycleUpper_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_CycleUpper.Text, out double cycleUpper))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.CycleUpper = cycleUpper;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_CycleLower_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_CycleLower.Text, out double cycleLower))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.CycleLower = cycleLower;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_IntegralUpper_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_IntegralUpper.Text, out double integralUpper))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.IntegralUpper = integralUpper;
+            InputThresholds?.Invoke(this, thresholds);
+        }
+
+        private void Btn_IntegralLower_Click(object sender, EventArgs e)
+        {
+            if (!double.TryParse(tb_IntegralLower.Text, out double integralLower))
+            {
+                MessageBox.Show("閥值格式無效");
+                return;
+            }
+
+            thresholds.IntegralLower = integralLower;
             InputThresholds?.Invoke(this, thresholds);
         }
 

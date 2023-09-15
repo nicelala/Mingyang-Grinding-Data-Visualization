@@ -74,14 +74,14 @@ namespace NetworkServiceNotifyExample
             }
         }
 
-        public static void AppendToCSV(string fileName, string deviceId, double maxRmsValue, double timeDifferenceSeconds, double cycleTimeSeconds, double waveformIntegral, string wheelStatus)
+        public static void AppendToCSV(string fileName, string deviceId, double maxRmsValue, double timeDifferenceSeconds, double cycleTimeSeconds, double waveformIntegral, string wheelStatus, string warningMessage)
         {
             string csvFilePath = GetCSVFilePath();
-            string csvContent = $"{DateTime.Now},{deviceId},{maxRmsValue:F2}A,{timeDifferenceSeconds:F2}seconds,{cycleTimeSeconds:F2}seconds,{waveformIntegral:F2},{wheelStatus}";
+            string csvContent = $"{DateTime.Now},{deviceId},{maxRmsValue:F2},{timeDifferenceSeconds:F2},{cycleTimeSeconds:F2},{waveformIntegral:F2},{wheelStatus},{warningMessage}";
 
             if (!File.Exists(csvFilePath))
             {
-                string header = "日期,設備ID,峰值,峰值時間,週期時間,波型積分,狀態";
+                string header = "日期,設備ID,峰值,峰值時間,週期時間,波型積分,狀態,提醒通知";
                 using (StreamWriter headerWriter = new StreamWriter(csvFilePath, false, Encoding.UTF8)) // 指定 UTF-8 編碼
                 {
                     headerWriter.WriteLine(header);

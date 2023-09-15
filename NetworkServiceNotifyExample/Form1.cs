@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -114,6 +115,17 @@ namespace NetworkServiceNotifyExample
         private double threshold_2 = 2.25;
         private double threshold_3 = 2.5;
         private double threshold_4 = 2.75;
+        private double peakUpper = 2;
+        private double peakLower = 2;
+        private double peakTimeUpper = 2;
+        private double peakTimeLower = 2;
+        private double cycleUpper = 2;
+        private double cycleLower = 2;
+        private double integralUpper = 2;
+        private double integralLower = 2;
+
+        private StringBuilder warningMessages = new StringBuilder();
+
         private int rmsPm = 50;
         private int smoothPm = 10;
         private bool parametersSet = false; // 增加一個參數設定完成的標誌
@@ -209,6 +221,14 @@ namespace NetworkServiceNotifyExample
             threshold_4 = e.Threshold4;
             rmsPm = e.RMSPm;
             smoothPm = e.SmoothPm;
+            peakUpper = e.PeakUpper;
+            peakLower = e.PeakLower;
+            peakTimeUpper = e.PeakTimeUpper;
+            peakTimeLower = e.PeakTimeLower;
+            cycleUpper = e.CycleUpper;
+            cycleLower = e.CycleLower;
+            integralUpper = e.IntegralUpper;
+            integralLower = e.IntegralLower;
 
             parametersSet = true; // 標誌設置為 true
         }
@@ -378,6 +398,28 @@ namespace NetworkServiceNotifyExample
                         chartPTimeRecord.ChartAreas[0].AxisX.Maximum = 100;
                         chartCTimeRecord.ChartAreas[0].AxisX.Maximum = 100;
                         chartIntegralRecord.ChartAreas[0].AxisX.Maximum = 100;
+
+                        CheckAndAppendMessage(warningMessages, maxMovingAverage, peakUpper, peakLower,
+                            "警告：機台電流峰值過高，可能是因為磨輪磨損過度或物料堵塞。請立即停機檢查。",
+                            "注意：機台電流峰值過低，可能是磨輪過於銳利或研磨物料過輕。建議檢查研磨效果。");
+
+                        CheckAndAppendMessage(warningMessages, intervalToMax, peakTimeUpper, peakTimeLower,
+                            "警告：到達電流峰值的時間過長，可能是磨輪磨損嚴重或存在機械問題。請立即檢查。",
+                            "注意：到達電流峰值的時間過短，可能是新磨輪過於銳利或研磨過程過快。建議檢查研磨品質。");
+
+                        CheckAndAppendMessage(warningMessages, CycleTimeseconds, cycleUpper, cycleLower,
+                            "警告：研磨週期過長，疑似機台效能下降或磨輪磨損。請立即進行維護檢查。",
+                            "注意：研磨週期過短，研磨品質可能受影響。請確保磨輪和機台設定是否合適。");
+
+                        CheckAndAppendMessage(warningMessages, totalArea, integralUpper, integralLower,
+                            "警告：波型積分異常高，可能存在機械問題或電流不穩，也可能是磨輪磨損嚴重。請立即停機檢查。",
+                            "注意：波型積分異常低，機台可能未達到最佳運行狀態。請檢查磨輪和研磨過程。");
+
+                        // 最後，檢查是否有任何消息被添加
+                        if (warningMessages.Length == 0)
+                        {
+                            warningMessages.Append("0");
+                        }
                     }));
 
 
@@ -387,8 +429,7 @@ namespace NetworkServiceNotifyExample
                     DateTime dateTime = DateTime.Now;
                     _fileHandler.SaveRmsValuesToCsv(movingAverageValues, directoryPath, dateTime);
                     string date = dateTime.ToString("yyyyMMddHHmmss"); // 取得當前日期
-                    FileHandler.AppendToCSV(date, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, LBWheelStatus.Text);
-
+                    FileHandler.AppendToCSV(date, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, LBWheelStatus.Text, warningMessages.ToString());
                 }
                 currentIntervalData.Clear();
                 currentIntervalVolt.Clear();
@@ -396,6 +437,19 @@ namespace NetworkServiceNotifyExample
                 allIntervalData.Clear();
             }
         }
+
+        private void CheckAndAppendMessage(StringBuilder sb, double value, double upperLimit, double lowerLimit, string warningMessage, string noteMessage)
+        {
+            if (value > upperLimit)
+            {
+                sb.Append(warningMessage);
+            }
+            else if (value < lowerLimit)
+            {
+                sb.Append(noteMessage);
+            }
+        }
+
 
         private List<double> CalculateSegmentedRMS(List<string> data, int segmentSize)
         {
