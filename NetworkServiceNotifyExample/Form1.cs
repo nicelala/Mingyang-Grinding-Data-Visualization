@@ -24,10 +24,14 @@ namespace NetworkServiceNotifyExample
 
         private string rootPath = @"C:\test\[Release]EDMPicoDeviceApplication-2000A-4ch";
         private Process externalProcess;
+        private ModbusServerManager modbusManager;
+
 
         public Form1()
         {
             InitializeComponent();
+            modbusManager = new ModbusServerManager();
+
             string rootPath = @"C:\test\[Release]EDMPicoDeviceApplication-2000A-4ch";
 
             SetupFolderWatcher(rootPath);
@@ -96,33 +100,19 @@ namespace NetworkServiceNotifyExample
             _NetworkService.Stop();
         }
 
-        //private void timer1_Tick(object sender, EventArgs e)
-        //{
-        //    if (!_NetworkService.NotifyMessageIsEmpty)
-        //    {
-        //        NotifyMessageContent content = _NetworkService.NextNotifyMessage();
-        //        if (content.DateTimeInstance.HasValue)
-        //        {
-        //            // File Paths
-        //            label1.Text = content.NotifyMessage;
-        //        }
-        //    }
-        //}
-
-
         private string device_ID = "H001";
-        private double threshold_1 = 2;
-        private double threshold_2 = 2.25;
-        private double threshold_3 = 2.5;
-        private double threshold_4 = 2.75;
-        private double peakUpper = 2;
-        private double peakLower = 2;
-        private double peakTimeUpper = 2;
-        private double peakTimeLower = 2;
-        private double cycleUpper = 2;
-        private double cycleLower = 2;
-        private double integralUpper = 2;
-        private double integralLower = 2;
+        private double threshold_1 = 25;
+        private double threshold_2 = 26;
+        private double threshold_3 = 27;
+        private double threshold_4 = 28;
+        private double peakUpper = 26;
+        private double peakLower = 24;
+        private double peakTimeUpper = 0.4;
+        private double peakTimeLower = 0.2;
+        private double cycleUpper = 16;
+        private double cycleLower = 14;
+        private double integralUpper = 38000;
+        private double integralLower = 35000;
 
         private StringBuilder warningMessages = new StringBuilder();
 
@@ -219,8 +209,8 @@ namespace NetworkServiceNotifyExample
             threshold_2 = e.Threshold2;
             threshold_3 = e.Threshold3;
             threshold_4 = e.Threshold4;
-            rmsPm = e.RMSPm;
-            smoothPm = e.SmoothPm;
+            // rmsPm = e.RMSPm;
+            // smoothPm = e.SmoothPm;
             peakUpper = e.PeakUpper;
             peakLower = e.PeakLower;
             peakTimeUpper = e.PeakTimeUpper;
@@ -253,7 +243,7 @@ namespace NetworkServiceNotifyExample
 
         private List<List<string>> allIntervalData = new List<List<string>>();
 
-        private void LoadCsvToChart(string csvPath)
+        private async void LoadCsvToChart(string csvPath)
         {
             using (var stream = new FileStream(csvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var sr = new StreamReader(stream))
@@ -272,14 +262,10 @@ namespace NetworkServiceNotifyExample
                         
                     }
                 }
-
-                // 如果文件读取结束时不在yVal > 2的区间中，但currentIntervalData有数据，那么将其加入到allIntervalData并清空
-                if (!isInOverTwoInterval && currentIntervalData.Count > 0)
-                {
-                    allIntervalData.Add(new List<string>(currentIntervalData));
-                    //currentIntervalData.Clear();
-                }
             }
+
+            ////使用Modbus協定傳送到Client端
+            modbusManager.UpdateModbusRegisters(dateNow, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, WheelStatus, warningMessages.ToString());
         }
 
         private double CalculateIntervalToMaxValue(List<string> data)
@@ -341,7 +327,11 @@ namespace NetworkServiceNotifyExample
 
         private bool isInOverTwoInterval = false;
         private double CycleTimeseconds = -1;
-        private void ProcessValue(double yVal)
+        private double intervalToMax = -1;
+        private string dateNow;
+        private string WheelStatus;
+
+        private async Task ProcessValue(double yVal) // 注意 "async" 和 "Task"
         {
             if (yVal > 2)
             {
@@ -358,7 +348,7 @@ namespace NetworkServiceNotifyExample
                     // 将当前区间的数据加入到 allIntervalData，然后清空 currentIntervalData
                     allIntervalData.Add(new List<string>(currentIntervalData));
 
-                    double intervalToMax = CalculateIntervalToMaxValue(currentIntervalData);
+                    intervalToMax = CalculateIntervalToMaxValue(currentIntervalData);
                     int totalCount = 0;
                     foreach (var interval in allIntervalData)
                     {
@@ -367,23 +357,37 @@ namespace NetworkServiceNotifyExample
                     CycleTimeseconds = totalCount / 5000.0;
 
                     UpdateChartWithSegmentedRMSData();
-                    this.Invoke(new Action(() =>{
-                        
+                    this.Invoke(new Action(() => {
+
                         // Update labels
                         LB_detail.Text = countOverTwo.ToString();
                         LBPeakTime.Text = $"{intervalToMax:F2} seconds";
                         LBCycleTime.Text = $"{CycleTimeseconds:F2} seconds";
-                        
-                        string[] statusNames = { "狀態1", "狀態2", "狀態3", "狀態4", "狀態5" };
+
+                        string[] statusNames = { "1", "2", "3", "4" };
                         double[] thresholds = { threshold_1, threshold_2, threshold_3, threshold_4 };
                         int statusIndex = 0;
 
-                        while (statusIndex < thresholds.Length && intervalToMax >= thresholds[statusIndex])
+                        while (statusIndex < thresholds.Length && maxMovingAverage >= thresholds[statusIndex])
                         {
                             statusIndex++;
                         }
 
-                        LBWheelStatus.Text = statusNames[statusIndex];
+                        // 添加检查以防止越界
+                        if (statusIndex >= statusNames.Length)
+                        {
+                            statusIndex = statusNames.Length - 1;
+                        }
+
+                        if (statusIndex == 0)
+                        {
+                            WheelStatus = "-";
+                        }
+                        else
+                        {
+                            WheelStatus = statusNames[statusIndex - 1];
+                        }
+                        LBWheelStatus.Text = WheelStatus;
 
                         // Now add these values to the charts
                         //int newChartXValue = chartPeakRecord.Series["MaxRmsValue"].Points.Count;  // replace "SeriesName" with the name of your series
@@ -393,27 +397,29 @@ namespace NetworkServiceNotifyExample
                         _chartUpdater.AddDataPoint(chartCTimeRecord, "CycleTimeSeconds", CycleTimeseconds);
                         _chartUpdater.AddDataPoint(chartIntegralRecord, "WaveformIntegral", totalArea);
 
+                        _chartUpdater.AddThresholdLines(chartPeakRecord, peakUpper, peakLower);
+                        _chartUpdater.AddThresholdLines(chartPTimeRecord, peakTimeUpper, peakTimeLower);
+                        _chartUpdater.AddThresholdLines(chartCTimeRecord, cycleUpper, cycleLower);
+                        _chartUpdater.AddThresholdLines(chartIntegralRecord, integralUpper, integralLower);
+
                         // Set maximum X value to 10
                         chartPeakRecord.ChartAreas[0].AxisX.Maximum = 100;
                         chartPTimeRecord.ChartAreas[0].AxisX.Maximum = 100;
                         chartCTimeRecord.ChartAreas[0].AxisX.Maximum = 100;
                         chartIntegralRecord.ChartAreas[0].AxisX.Maximum = 100;
 
-                        CheckAndAppendMessage(warningMessages, maxMovingAverage, peakUpper, peakLower,
-                            "警告：機台電流峰值過高，可能是因為磨輪磨損過度或物料堵塞。請立即停機檢查。",
-                            "注意：機台電流峰值過低，可能是磨輪過於銳利或研磨物料過輕。建議檢查研磨效果。");
+                        CheckAndAppendMessage(warningMessages, maxMovingAverage, peakUpper,
+                            "A");
 
-                        CheckAndAppendMessage(warningMessages, intervalToMax, peakTimeUpper, peakTimeLower,
-                            "警告：到達電流峰值的時間過長，可能是磨輪磨損嚴重或存在機械問題。請立即檢查。",
-                            "注意：到達電流峰值的時間過短，可能是新磨輪過於銳利或研磨過程過快。建議檢查研磨品質。");
+                        CheckAndAppendMessage(warningMessages, intervalToMax, peakTimeUpper,
+                            "B");
 
-                        CheckAndAppendMessage(warningMessages, CycleTimeseconds, cycleUpper, cycleLower,
-                            "警告：研磨週期過長，疑似機台效能下降或磨輪磨損。請立即進行維護檢查。",
-                            "注意：研磨週期過短，研磨品質可能受影響。請確保磨輪和機台設定是否合適。");
+                        CheckAndAppendMessage(warningMessages, CycleTimeseconds, cycleUpper,
+                            "C");
 
-                        CheckAndAppendMessage(warningMessages, totalArea, integralUpper, integralLower,
-                            "警告：波型積分異常高，可能存在機械問題或電流不穩，也可能是磨輪磨損嚴重。請立即停機檢查。",
-                            "注意：波型積分異常低，機台可能未達到最佳運行狀態。請檢查磨輪和研磨過程。");
+                        CheckAndAppendMessage(warningMessages, totalArea, integralUpper,
+                            "D");
+
 
                         // 最後，檢查是否有任何消息被添加
                         if (warningMessages.Length == 0)
@@ -428,9 +434,12 @@ namespace NetworkServiceNotifyExample
                     string directoryPath = "C:\\test\\[Release]EDMPicoDeviceApplication-2000A-4ch\\RMS_DATA";
                     DateTime dateTime = DateTime.Now;
                     _fileHandler.SaveRmsValuesToCsv(movingAverageValues, directoryPath, dateTime);
-                    string date = dateTime.ToString("yyyyMMddHHmmss"); // 取得當前日期
-                    FileHandler.AppendToCSV(date, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, LBWheelStatus.Text, warningMessages.ToString());
+                    dateNow = dateTime.ToString("yyyyMMddHHmmss"); // 取得當前日期
+                    FileHandler.AppendToCSV(dateNow, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, LBWheelStatus.Text, warningMessages.ToString());
+
+                    
                 }
+
                 currentIntervalData.Clear();
                 currentIntervalVolt.Clear();
                 countOverTwo = 0;
@@ -438,18 +447,17 @@ namespace NetworkServiceNotifyExample
             }
         }
 
-        private void CheckAndAppendMessage(StringBuilder sb, double value, double upperLimit, double lowerLimit, string warningMessage, string noteMessage)
+        private void CheckAndAppendMessage(StringBuilder sb, double value, double upperLimit, string warningMessage)
         {
             if (value > upperLimit)
             {
                 sb.Append(warningMessage);
             }
-            else if (value < lowerLimit)
-            {
-                sb.Append(noteMessage);
-            }
+            //else if (value < lowerLimit)
+            //{
+            //    sb.Append(noteMessage);
+            //}
         }
-
 
         private List<double> CalculateSegmentedRMS(List<string> data, int segmentSize)
         {
@@ -590,76 +598,6 @@ namespace NetworkServiceNotifyExample
             }
 
             return totalArea;
-        }
-        private void UpdateChartWithCurrentIntervalData()
-        {
-            try
-            {
-                if (chartCurrentWave.InvokeRequired)
-                {
-                    chartCurrentWave.BeginInvoke(new Action(UpdateChartWithCurrentIntervalData));
-                    return;
-                }
-
-                // 確保 "Current Wave" 序列存在
-                if (!chartCurrentWave.Series.Any(s => s.Name == "Current Wave"))
-                {
-                    chartCurrentWave.Series.Add("Current Wave");
-                }
-                var series = chartCurrentWave.Series["Current Wave"];
-                series.Points.Clear();
-
-                foreach (var data in currentIntervalData)
-                {
-                    double value;
-                    if (double.TryParse(data, out value))
-                    {
-                        series.Points.Add(value);
-                    }
-                }
-                chartCurrentWave.Invalidate(); // 重繪圖表
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}");
-            }
-        }
-        private void UpdateChartWithAllIntervalData()
-        {
-            try
-            {
-                if (chartCurrentWave.InvokeRequired)
-                {
-                    chartCurrentWave.BeginInvoke(new Action(UpdateChartWithAllIntervalData));
-                    return;
-                }
-
-                // 確保 "Current Wave" 序列存在
-                if (!chartCurrentWave.Series.Any(s => s.Name == "Current Wave"))
-                {
-                    chartCurrentWave.Series.Add("Current Wave");
-                }
-                var series = chartCurrentWave.Series["Current Wave"];
-                series.Points.Clear();
-
-                // 迭代所有区间数据并添加到图表
-                foreach (var interval in allIntervalData)
-                {
-                    foreach (var data in interval)
-                    {
-                        double value;
-                        if (double.TryParse(data, out value))
-                        {
-                            series.Points.Add(value);
-                        }
-                    }
-                }
-                chartCurrentWave.Invalidate(); // 重繪圖表
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}");
-            }
         }
     }
 }

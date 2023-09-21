@@ -98,6 +98,38 @@ namespace NetworkServiceNotifyExample
             chart.Invalidate();
         }
 
+        private Dictionary<Chart, List<StripLine>> chartStripLines = new Dictionary<Chart, List<StripLine>>();
+
+        public void AddThresholdLines(Chart chart, double upperLimit, double lowerLimit)
+        {
+            // 移除该图表的现有上下限线
+            if (chartStripLines.ContainsKey(chart))
+            {
+                foreach (var stripLine in chartStripLines[chart])
+                {
+                    chart.ChartAreas[0].AxisY.StripLines.Remove(stripLine);
+                }
+            }
+
+            // 添加新的上限线
+            var upperLine = new StripLine();
+            upperLine.BorderColor = Color.Red;
+            upperLine.BorderWidth = 2;
+            upperLine.IntervalOffset = upperLimit;
+
+            // 添加新的下限线
+            var lowerLine = new StripLine();
+            lowerLine.BorderColor = Color.Green;
+            lowerLine.BorderWidth = 2;
+            lowerLine.IntervalOffset = lowerLimit;
+
+            // 把新的上下限线添加到图表中
+            chart.ChartAreas[0].AxisY.StripLines.Add(upperLine);
+            chart.ChartAreas[0].AxisY.StripLines.Add(lowerLine);
+
+            // 存储该图表的新上下限线
+            chartStripLines[chart] = new List<StripLine> { upperLine, lowerLine };
+        }
 
 
     }

@@ -20,8 +20,8 @@ namespace NetworkServiceNotifyExample
             public double Threshold2 { get; set; }
             public double Threshold3 { get; set; }
             public double Threshold4 { get; set; }
-            public int RMSPm { get; set; }
-            public int SmoothPm { get; set; }
+            //public int RMSPm { get; set; }
+            //public int SmoothPm { get; set; }
 
             public double PeakUpper { get; set; }
             public double PeakLower { get; set; }
@@ -102,6 +102,7 @@ namespace NetworkServiceNotifyExample
 
             thresholds.Threshold4 = threshold4;
             InputThresholds?.Invoke(this, thresholds);
+            this.Close();
         }
 
         private void Btn_PeakUpper_Click(object sender, EventArgs e)
@@ -200,7 +201,7 @@ namespace NetworkServiceNotifyExample
             InputThresholds?.Invoke(this, thresholds);
         }
 
-        // 每次点击按钮，都更新对应的参数，并触发事件
+        //每次点击按钮，都更新对应的参数，并触发事件
         private void Btn_InputRmsPm_Click(object sender, EventArgs e)
         {
             if (!int.TryParse(tb_RMSPara.Text, out int rmsPm))
@@ -209,8 +210,9 @@ namespace NetworkServiceNotifyExample
                 return;
             }
 
-            thresholds.RMSPm = rmsPm;
+            //thresholds.RMSPm = rmsPm;
             InputThresholds?.Invoke(this, thresholds);
+
         }
 
         private void Btn_InputSmoothPm_Click(object sender, EventArgs e)
@@ -221,10 +223,10 @@ namespace NetworkServiceNotifyExample
                 return;
             }
 
-            thresholds.SmoothPm = smoothPm;
+            // thresholds.SmoothPm = smoothPm;
 
             InputThresholds?.Invoke(this, thresholds);
-            this.Close();
+
 
         }
     }
