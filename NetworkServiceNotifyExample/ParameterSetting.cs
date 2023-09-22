@@ -53,7 +53,6 @@ namespace NetworkServiceNotifyExample
 
             thresholds.DeviceID = tb_DeviceID.Text;
             InputThresholds?.Invoke(this, thresholds);
-
         }
 
         private void Btn_InputThreshold1_Click(object sender, EventArgs e)

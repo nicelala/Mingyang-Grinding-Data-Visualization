@@ -261,11 +261,14 @@ namespace NetworkServiceNotifyExample
                         ProcessValue(yVal);
                         
                     }
+                    //使用Modbus協定傳送到Client端
+                    modbusManager.UpdateModbusRegisters(dateNow, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, WheelStatus.ToString(), warningMessages.ToString());
+                    warningMessages.Clear();  // 如果使用同一个StringBuilder实例
                 }
             }
 
-            ////使用Modbus協定傳送到Client端
-            modbusManager.UpdateModbusRegisters(dateNow, device_ID, maxMovingAverage, intervalToMax, CycleTimeseconds, totalArea, WheelStatus, warningMessages.ToString());
+            
+
         }
 
         private double CalculateIntervalToMaxValue(List<string> data)
@@ -329,7 +332,7 @@ namespace NetworkServiceNotifyExample
         private double CycleTimeseconds = -1;
         private double intervalToMax = -1;
         private string dateNow;
-        private string WheelStatus;
+        private string WheelStatus = "";
 
         private async Task ProcessValue(double yVal) // 注意 "async" 和 "Task"
         {
